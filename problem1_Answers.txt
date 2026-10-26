@@ -1,0 +1,141 @@
+================================================================================
+Alexandria National University - Faculty of Engineering
+Introduction to Database Systems (Fall 2026) - Lab 3
+File: problem1_Answers.txt
+Students:
+  1. A'laa Sherif Ibrahim (ID: 2304249)
+  2. Mariam Mohamed Ali   (ID: 2304251)
+================================================================================
+
+--------------------------------------------------------------------------------
+Q1.1: Insert a row in the DEPARTMENT table that references a row in the EMPLOYEE
+      table. Then try to delete the referenced row. What will happen?
+--------------------------------------------------------------------------------
+
+1. SQL Statements Used:
+   USE company;
+
+   -- Ensure referenced employee exists (or insert a new employee)
+   INSERT INTO EMPLOYEE (ssn, fname, lname, bdate, address, gender, salary, Dno)
+   VALUES (105, 'Youssef', 'Adel', '1998-07-12', 'Sidi Gaber, Alexandria', 'M', 31000.00, 1);
+
+   -- Insert a row in DEPARTMENT that references EMPLOYEE(ssn = 105)
+   INSERT INTO DEPARTMENT (Dnumber, Dname, mgr_ssn, mgr_start_date)
+   VALUES (5, 'Data Science', 105, '2025-01-01');
+
+   -- Attempt to delete the referenced row in EMPLOYEE
+   DELETE FROM EMPLOYEE WHERE ssn = 105;
+
+2. MySQL Output / Error Message:
+   Query OK, 1 row affected (0.01 sec)
+   Query OK, 1 row affected (0.01 sec)
+
+   ERROR 1451 (23000): Cannot delete or update a parent row: a foreign key constraint fails (`company`.`department`, CONSTRAINT `department_ibfk_1` FOREIGN KEY (`mgr_ssn`) REFERENCES `employee` (`ssn`))
+
+3. Explanation:
+   MySQL rejects the DELETE statement with ERROR 1451 (23000) to enforce referential
+   integrity. Because `DEPARTMENT.mgr_ssn` is a foreign key referencing `EMPLOYEE.ssn`
+   without `ON DELETE CASCADE` or `ON DELETE SET NULL` (defaulting to `RESTRICT`),
+   MySQL prohibits deleting the parent row (`ssn = 105` in `EMPLOYEE`) while a child
+   row (`Dnumber = 5` in `DEPARTMENT`) still references it. To delete employee 105,
+   you must first update or delete the referencing row in `DEPARTMENT`.
+
+
+--------------------------------------------------------------------------------
+Q1.2: Insert a row in the PROJECT table that references a row in the DEPARTMENT
+      table that doesn't exist yet. What will happen?
+--------------------------------------------------------------------------------
+
+1. SQL Statements Used:
+   USE company;
+
+   -- Attempt to insert a project referencing non-existent department Dno = 999
+   INSERT INTO PROJECT (Pnumber, Pname, Plocation, Dno)
+   VALUES (99, 'Quantum Cryptography', 'Alexandria', 999);
+
+2. MySQL Output / Error Message:
+   ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint fails (`company`.`project`, CONSTRAINT `project_ibfk_1` FOREIGN KEY (`Dno`) REFERENCES `department` (`Dnumber`))
+
+3. Explanation:
+   MySQL rejects the INSERT statement with ERROR 1452 (23000) because of the
+   foreign key constraint (`PROJECT.Dno` -> `DEPARTMENT.Dnumber`). Referential
+   integrity requires every non-NULL foreign key value to match an existing
+   primary key value in the referenced parent table. Since `Dnumber = 999` does
+   not exist in `DEPARTMENT`, the insert fails.
+
+
+--------------------------------------------------------------------------------
+Q1.3: If mgr_ssn and Dno are both NOT NULL, how will you insert the first row in
+      EMPLOYEE or DEPARTMENT?
+--------------------------------------------------------------------------------
+
+1. Problem Analysis:
+   If `EMPLOYEE.Dno` is `NOT NULL` and `DEPARTMENT.mgr_ssn` is `NOT NULL` while
+   both foreign keys are active, a circular dependency deadlock occurs:
+   - You cannot insert into `EMPLOYEE` first because `Dno` cannot be `NULL` and
+     no row exists in `DEPARTMENT` yet.
+   - You cannot insert into `DEPARTMENT` first because `mgr_ssn` cannot be `NULL`
+     and no row exists in `EMPLOYEE` yet.
+
+2. Solution Method A (Recommended Lab 3 Approach: Add Foreign Keys via ALTER TABLE
+   AFTER inserting the initial rows):
+   Create both tables with `NOT NULL` columns, insert the initial mutually
+   referencing rows while the foreign key constraints are not yet attached, and
+   then add the foreign keys using `ALTER TABLE`:
+
+   -- SQL Sequence (Method A):
+   CREATE TABLE EMPLOYEE (
+       ssn INT NOT NULL,
+       fname VARCHAR(50) NOT NULL,
+       lname VARCHAR(50) NOT NULL,
+       bdate DATE,
+       address VARCHAR(100),
+       gender CHAR(1),
+       salary DECIMAL(10,2),
+       Dno INT NOT NULL,
+       PRIMARY KEY (ssn)
+   );
+
+   CREATE TABLE DEPARTMENT (
+       Dnumber INT NOT NULL,
+       Dname VARCHAR(50) NOT NULL,
+       mgr_ssn INT NOT NULL,
+       mgr_start_date DATE,
+       PRIMARY KEY (Dnumber)
+   );
+
+   -- Insert the first rows before adding foreign key constraints
+   INSERT INTO DEPARTMENT (Dnumber, Dname, mgr_ssn, mgr_start_date)
+   VALUES (1, 'Research and AI', 101, '2023-01-15');
+
+   INSERT INTO EMPLOYEE (ssn, fname, lname, bdate, address, gender, salary, Dno)
+   VALUES (101, 'Alaa', 'Ibrahim', '2004-05-14', 'Smouha, Alexandria', 'F', 28500.00, 1);
+
+   -- Now enforce referential integrity with ALTER TABLE
+   ALTER TABLE EMPLOYEE
+       ADD FOREIGN KEY (Dno) REFERENCES DEPARTMENT(Dnumber);
+
+   ALTER TABLE DEPARTMENT
+       ADD FOREIGN KEY (mgr_ssn) REFERENCES EMPLOYEE(ssn);
+
+3. Solution Method B (If Foreign Keys are Already Created: Temporarily Disable
+   Foreign Key Checks):
+   If the foreign keys are already active on the tables, temporarily disable
+   foreign key checking for the current session, insert both rows, and re-enable it:
+
+   -- SQL Sequence (Method B):
+   SET FOREIGN_KEY_CHECKS = 0;
+
+   INSERT INTO DEPARTMENT (Dnumber, Dname, mgr_ssn, mgr_start_date)
+   VALUES (1, 'Research and AI', 101, '2023-01-15');
+
+   INSERT INTO EMPLOYEE (ssn, fname, lname, bdate, address, gender, salary, Dno)
+   VALUES (101, 'Alaa', 'Ibrahim', '2004-05-14', 'Smouha, Alexandria', 'F', 28500.00, 1);
+
+   SET FOREIGN_KEY_CHECKS = 1;
+
+4. MySQL Output:
+   Query OK, 0 rows affected (0.00 sec)
+   Query OK, 1 row affected (0.01 sec)
+   Query OK, 1 row affected (0.01 sec)
+   Query OK, 0 rows affected (0.00 sec)
