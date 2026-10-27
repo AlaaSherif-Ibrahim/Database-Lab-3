@@ -1,0 +1,53 @@
+================================================================================
+Alexandria National University - Faculty of Engineering
+Introduction to Database Systems (Fall 2026) - Lab 3
+File: problem2_Answers.txt (Problem 2 SQL Queries & Technical Reference)
+Students:
+  1. A'laa Sherif Ibrahim (ID: 2304249)
+  2. Mariam Mohamed Ali   (ID: 2304251)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. How Cascading Deletion is Configured in DDL (problem2_DDL.sql)
+--------------------------------------------------------------------------------
+SQL Definition:
+  CREATE TABLE BOOK (
+      book_id INT NOT NULL,
+      title VARCHAR(100) NOT NULL,
+      price DECIMAL(10,2) NOT NULL,
+      author_id INT NOT NULL,
+      cover_path VARCHAR(255) DEFAULT NULL,
+      PRIMARY KEY (book_id),
+      FOREIGN KEY (author_id) REFERENCES AUTHOR(author_id) ON DELETE CASCADE
+  );
+
+Explanation:
+  By specifying `ON DELETE CASCADE` on the foreign key `BOOK.author_id`, MySQL
+  automatically deletes all child rows in `BOOK` whenever their referenced parent
+  row in `AUTHOR` is deleted. This maintains referential integrity without
+  requiring manual deletion of the author's books first.
+
+--------------------------------------------------------------------------------
+2. Exact Simple SQL Queries Used in the Website (F2.1 - F2.5)
+--------------------------------------------------------------------------------
+
+- F2.1: Show table of books (with author_id) and table of authors
+  SELECT author_id, name, country, photo_path FROM AUTHOR ORDER BY author_id ASC;
+  SELECT book_id, title, price, author_id, cover_path FROM BOOK ORDER BY book_id ASC;
+
+- F2.2: Add a book and add an author
+  INSERT INTO AUTHOR (author_id, name, country, photo_path) VALUES (?, ?, ?, ?);
+  INSERT INTO BOOK (book_id, title, price, author_id, cover_path) VALUES (?, ?, ?, ?, ?);
+
+- F2.3: Edit a book and edit an author
+  UPDATE AUTHOR SET name = ?, country = ? WHERE author_id = ?;
+  UPDATE BOOK SET title = ?, price = ?, author_id = ? WHERE book_id = ?;
+
+- F2.4: Remove a book
+  DELETE FROM BOOK WHERE book_id = ?;
+  (Deletes only the specified book row; the parent row in AUTHOR is unaffected.)
+
+- F2.5: Remove an author (and all of their books)
+  DELETE FROM AUTHOR WHERE author_id = ?;
+  (Deletes the author from AUTHOR, and MySQL automatically deletes all rows in
+   BOOK where BOOK.author_id matches the deleted author_id due to ON DELETE CASCADE.)
